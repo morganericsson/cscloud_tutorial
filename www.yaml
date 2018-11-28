@@ -1,0 +1,89 @@
+heat_template_version: 2018-03-02
+
+description: Parameterized template to create a web server
+
+parameters:
+  image:
+    type: string
+    label: Image name or ID
+    description: Image to be used for compute instance
+    default: Ubuntu server 18.04
+  flavor:
+    type: string
+    label: Flavor
+    description: Type of instance (flavor) to be used
+    default: c1-r05-d20
+  key:
+    type: string
+    label: Key name
+    description: Name of key-pair to be used for compute instance
+    default: mykey
+  servername:
+    type: string
+    label: Server name
+    description: Name of the server
+    default: myserver
+  networkname:
+    type: string
+    label: Network name
+    description: Name of the network
+    default: private
+  subnetname:
+    type: string
+    label: Subnet name
+    description: Name of the subnet
+    default: subnet
+
+
+resources:
+  security_group:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: web_server
+      rules:
+        - protocol: tcp
+          port_range_min: 80
+          port_range_max: 80
+
+  myserver_port:
+    type: OS::Neutron::Port
+    properties:
+      network_id: { get_param: networkname }
+      fixed_ips:
+        - subnet_id: { get_param: subnetname }
+      security_groups: [{ get_resource: security_group }, ssh]
+
+  myserver_floating_ip:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network_id: public
+      port_id: { get_resource: myserver_port }
+
+  myserver:
+    type: OS::Nova::Server
+    properties:
+      name: { get_param: servername }
+      key_name: { get_param: key }
+      image: { get_param: image }
+      flavor: { get_param: flavor }
+      availability_zone: Education
+      networks:
+        - port:  { get_resource: myserver_port }
+      user_data_format: RAW
+      user_data: |
+        #cloud-config
+        packages:
+          - apache2
+        package_update: true
+        package_upgrade: true
+        write_files:
+          - content: |
+              <html><head><title>Hello!</title></head>
+              <body><h1>Hello CSCLOUD tutorial</h1><body>
+              </html>
+            path: /var/www/html/hello.html
+
+outputs:
+  instance_ip:
+    description: Public IP address
+    value: { get_attr: [myserver_floating_ip, floating_ip_address] }

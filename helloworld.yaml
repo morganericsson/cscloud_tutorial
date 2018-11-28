@@ -1,0 +1,13 @@
+heat_template_version: 2018-03-02
+
+description: Hello world in heat that creates a single server
+
+resources:
+  s2:
+    type: OS::Nova::Server
+    properties:
+      name: hello_world
+      key_name: mykey
+      image: Ubuntu server 18.04
+      flavor: c1-r05-d20
+      availability_zone: Education
