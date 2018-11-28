@@ -1,1 +1,1 @@
-# cscloud_tutorial
+# Material for lectures/workshops about `cscloud`. 
