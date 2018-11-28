@@ -1,0 +1,66 @@
+heat_template_version: 2018-03-02
+
+description: |
+  Everything from scratch (same as the slides example), except the key-pair, since it's annoying to get the keys.
+  Note: all values are hard coded, just like the slides.
+
+resources:
+  security_group:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: ssh
+      rules:
+        - protocol: tcp
+          port_range_min: 22
+          port_range_max: 22
+
+  network:
+    type: OS::Neutron::Net
+    properties:
+      name: mynet
+
+  subnet:
+    type: OS::Neutron::Subnet
+    properties:
+      name: mysn
+      network_id: { get_resource: network }
+      cidr: 192.168.0.0/24
+      gateway_ip: 192.168.0.1
+
+  router:
+    type: OS::Neutron::Router
+    properties:
+      name: myrouter
+      external_gateway_info:
+        network: public
+
+  router_if1:
+    type: OS::Neutron::RouterInterface
+    properties:
+      router_id: { get_resource: router }
+      subnet_id: { get_resource: subnet }
+
+  server_port:
+    type: OS::Neutron::Port
+    properties:
+      network_id: { get_resource: network }
+      fixed_ips:
+        - subnet_id: { get_resource: subnet }
+      security_groups: [ { get_resource: security_group } ]
+
+  server1_floating_ip:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network_id: public
+      port_id: { get_resource: server_port }
+
+  server:
+    type: OS::Nova::Server
+    properties:
+      name: myserver
+      key_name: mykey
+      image: Ubuntu server 18.04
+      flavor: c1-r05-d20
+      networks:
+        - port: { get_resource: server_port }
+      availability_zone: Education
